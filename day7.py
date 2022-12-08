@@ -4,13 +4,13 @@ with open('input.txt', 'r') as file_origin:
 lines = [line.strip() for line in lines]
 
 class Node:
-	def __init__(self, node_type, name, childNodes = [], parentNode = None, size = None):
+	def __init__(self, node_type, name, parentNode = None, size = None):
 		
 		self.node_type = node_type # 0 -- files, 1 -- dirs
 		self.name = name
 		self.parentNode = parentNode
 		self.size = None if size == None else int(size)
-		self.childNodes = childNodes
+		self.childNodes = []
 
 rootDir = None
 currentDir = None
@@ -40,8 +40,8 @@ def readls(args):
 			if not currentDir:
 				print(f'it cannot be, {arg}')
 				return
-			newFolder = Node(1, arg[1], parentNode = currentDir)
-			currentDir.childNodes.append(newFolder)
+			newFolder = Node(node_type = 1, name = arg[1], parentNode = currentDir)
+			(currentDir.childNodes).append(newFolder)
 
 def cmdRead(linearr):
 	cmdarr = linearr.split(' ')
@@ -103,7 +103,10 @@ beginRead(testlines)
 
 def printTree(argtest, k = 0):
 	tab = k
+	space = ' '*tab
+	print(f'{space}{argtest.name}:')
 	for item in argtest.childNodes:
-		print(f'{tab}{item.name}')
+		space = tab*' '
+		printTree(item, tab+2)
 printTree(rootDir)
 #print(currentDir.name)
