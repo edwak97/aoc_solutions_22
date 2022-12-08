@@ -92,21 +92,7 @@ def beginRead(lines):
 					i = args[1]
 					continue
 			i+=1
-testlines = [
-	'$ cd /',
-	'$ ls',
-	'dir A',
-	'dir B',
-	'dir C',
-	'$ cd A',
-	'$ ls',
-	'50000 file1.txt',
-	'40000 file2.txt',
-	'$ cd ..',
-	'$ cd B',
-	'$ ls',
-	'99000 wow.txt',
-	'dir kek',]
+
 def findSize(dire):
 	res = 0
 	for item in dire.childNodes:
