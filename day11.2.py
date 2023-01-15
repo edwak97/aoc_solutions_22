@@ -38,7 +38,6 @@ while(i < len(lines)):
 				item = kwargs.get('item')
 				m = kwargs.get('m')
 				num = monkey[m]['num']
-				item['val'] += num
 				for _divisor in divisors:
 					item[_divisor] = (item[_divisor] + (num % _divisor)) % _divisor
 				return item
