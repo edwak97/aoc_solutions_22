@@ -7,7 +7,7 @@ beginValve = 'AA'
 T = 26
 
 lines = []
-with open('testinput.txt', 'r') as file_origin: 
+with open('input.txt', 'r') as file_origin: 
 		lines = file_origin.readlines()
 lines = [(lambda x:x)(line.strip()) for line in lines]
 
@@ -37,10 +37,10 @@ for key in valves: #getting the distance between this valve and other valves
 
 valveNames = [key for key,val in valves.items() if val['rate'] > 0]
 
-def getCombinations(previousValve, released, T, previousValve2, released2, T2, nextNames):
+def getCombinations(previousValve1, released1, T1, previousValve2, released2, T2, nextNames):
 	
 	if not nextNames:
-		yield released + released2
+		yield released1 + released2
 		return
 	
 	#combination generation
@@ -49,22 +49,22 @@ def getCombinations(previousValve, released, T, previousValve2, released2, T2, n
 		_nextNames = copy.copy(nextNames)
 		del(_nextNames[i])
 
-		if (T == None):
-			_released = released
-			_previousValve = None
-			_T = None
+		if (T1 == None):
+			_released1 = released1
+			_previousValve1 = None
+			_T1 = None
 		else:
-			_T = T - (timeToRelease + valves[previousValve]['valves'][nextNames[i]])
-			if (_T <= 0):
-				_released = released
-				_previousValve = None
-				_T = None
+			_T1 = T1 - (timeToRelease + valves[previousValve1]['valves'][nextNames[i]])
+			if (_T1 <= 0):
+				_released1 = released1
+				_previousValve1 = None
+				_T1 = None
 			else:
-				_released = released + valves[previousValve]['rate'] * _T
-				_previousValve = nextNames[i]
+				_released1 = released1 + valves[nextNames[i]]['rate'] * _T1
+				_previousValve1 = nextNames[i]
 
 		if not _nextNames:
-			yield _released + released2
+			yield _released1 + released2
 			continue
 
 		for k in range(len(_nextNames)):
@@ -80,16 +80,16 @@ def getCombinations(previousValve, released, T, previousValve2, released2, T2, n
 					_previousValve2 = None
 					_T2 = None
 				else:
-					_released2 = released2 + valves[previousValve2]['rate'] * _T2
+					_released2 = released2 + valves[_nextNames[k]]['rate'] * _T2
 					_previousValve2 = _nextNames[k]
 			
-			if(_T == _T2 == None):
-				yield _released + _released2
+			if(_T1 == _T2 == None):
+				yield _released1 + _released2
 				continue
 
 			__nextNames = copy.copy(_nextNames)
 			del(__nextNames[k])
-			combination = getCombinations(_previousValve, _released, _T, _previousValve2, _released2, _T2, __nextNames)
+			combination = getCombinations(_previousValve1, _released1, _T1, _previousValve2, _released2, _T2, __nextNames)
 			while(True):
 				try:
 					yield next(combination)
@@ -97,14 +97,17 @@ def getCombinations(previousValve, released, T, previousValve2, released2, T2, n
 					break
 n = 0
 bestProductivity = 0
-
+print(f'all names: {valveNames}')
 for i in range(len(valveNames)):
 
 	k = i + 1
+	beginValve1 = valveNames[i]
+	T1 = T - (timeToRelease + valves[beginValve]['valves'][beginValve1])
+	
 	while(k < len(valveNames)):
 		
-		beginValve1, beginValve2 = valveNames[i], valveNames[k]
-		T1 = T - (timeToRelease + valves[beginValve]['valves'][beginValve1])
+		print(f'combina {valveNames[i]}-{valveNames[k]}')
+		beginValve2 = valveNames[k]
 		T2 = T - (timeToRelease + valves[beginValve]['valves'][beginValve2])
 		released1 = 0
 		released2 = 0
@@ -121,23 +124,25 @@ for i in range(len(valveNames)):
 		_valveNames = copy.copy(valveNames)
 		del(_valveNames[k])
 		del(_valveNames[i]) # order makes sense
+		
+		#print(f'next: {_valveNames}')
 
-		combina = getCombinations(
-		beginValve1, released1, T1,
-		beginValve2, released2, T2,
-		_valveNames
+		k += 1
+		baseCombination = getCombinations(
+				beginValve1, released1, T1,
+				beginValve2, released2, T2,
+				_valveNames
 		)
 		k += 1
-
+		#print(f'{beginValve1} {released1} {T1}\n{beginValve2} {released2} {T2}')
 		while True:
 			try:
-				thisValue = next(combina)
+				thisValue = next(baseCombination)
 				if thisValue > bestProductivity:
 					bestProductivity = thisValue
-					#print(f'Better solution! combination {i}, value {bestProductivity}\n')
+					print(f'Better solution! combination {n}, value {bestProductivity}\n')
 				n += 1	
 			except StopIteration:
 				break
-
-print(f'{i} combinations considered\n{bestProductivity}')
+print(f'{n} combinations considered\n{bestProductivity}')
 
