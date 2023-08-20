@@ -1,5 +1,5 @@
 
-toBottom, toLeft, width, rocksToPass = 3, 2, 7, 2022 
+toBottom, toLeft, width, rocksToPass = 3, 2, 7, 1000000000000
 
 lines = []
 with open('input.txt', 'r') as file_origin: 
@@ -34,16 +34,19 @@ rocks = [
 ]
 
 #baseState
-rock_counter, currentRockIndex, currentRockState = 0, -1, None
+rel_rock, rock_counter, currentRockIndex, currentRockState = 0, 0, -1, None
+
+currentBundle = None
+
 state = [[1 for x in range(width)]]
 
 def arrow_handler():
-	i = 0
+	arrow_counter = 0
 	while(True):
-		if i == len(arrows):
-			i = 0
-		yield arrows[i]
-		i += 1
+		if arrow_counter == len(arrows):
+			arrow_counter = 0
+		yield (arrows[arrow_counter], arrow_counter)
+		arrow_counter += 1
 
 #removing empty height except for $toBottom given by initial data
 def shortenSpace():
@@ -120,19 +123,71 @@ def applyArrow(arrow: str):
 		currentRockState = set(map(moveByArrow, currentRockState))
 	return applyDown()
 
+combinationsParams = {}
+def saveRockToCurrentBundle(arrow: int):
+	global currentBundle
+
+	if not currentBundle:
+		delta_y =  -min([item[1] for item in currentRockState])
+		delta_x = -min([item[0] for item in currentRockState])
+		currentBundle = {'delta_x': delta_x, 'delta_y': delta_y, 'arrow': arrow, 'rocks_state': (delta_x,)}
+		return
+	
+	y = min([item[1] for item in currentRockState])+currentBundle['delta_y']
+	x = min([item[0] for item in currentRockState])+currentBundle['delta_x']
+	
+	currentBundle['rocks_state'] += (x, y)
+
+bundleStorage = {}
 arrow = arrow_handler()
 initRockAppear()
-
+heightPatternPassed = 0
 while(True):
 	
+	current_arrow = next(arrow)
 	#if bottom has been reached
-	if applyArrow(next(arrow)):
-		rock_counter += 1
+	if applyArrow(current_arrow[0]):
+		saveRockToCurrentBundle(current_arrow[1])
+		if rel_rock == len(rocks)-1:
+			shortenSpace()
 
+			#scanning previously saved stated for matching an arrow_index and a current position of rocks in a bundle
+			currentBundle['rocks_state'] += (currentBundle['arrow'],)
+			currentBundle['rocks_state'] = frozenset(currentBundle['rocks_state'])
+	
+			startPattern = bundleStorage.get(currentBundle['rocks_state'])
+			#comparing this bundle of (0-1-2-3)_n rock combination with other saved bundles
+			if startPattern:
+				
+				#block where pattern begins
+				index_start, height_start = startPattern['rock_counter'], startPattern['height']
+				
+				patternHeight = len(state)-toBottom-height_start-1
+				patternStep = rock_counter - index_start
+
+				#calculating the number of patterns exclusing this one found
+
+				patternsToCount = (rocksToPass - rock_counter - 1)//patternStep
+				rocksToPass -= patternsToCount * patternStep
+				heightPatternPassed = patternsToCount * patternHeight
+
+				bundleStorage = {}
+				currentRockIndex, rel_rock = -1, 0
+				initRockAppear()
+				currentBundle = None
+				rock_counter += 1
+				continue
+			else:
+				bundleStorage[currentBundle['rocks_state']] = {'height': len(state)-toBottom-1, 'rock_counter': rock_counter}
+				
+			currentBundle = None
+		rock_counter += 1
+		rel_rock += 1
+		rel_rock = 0 if rel_rock == len(rocks) else rel_rock
 		if(rock_counter < rocksToPass):
 			initRockAppear()
 			continue
 		break
 shortenSpace()
-print(len(state)-toBottom-1)
+print('\nresult: ', heightPatternPassed + len(state)-toBottom-1)
 
