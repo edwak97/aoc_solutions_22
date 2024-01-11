@@ -50,10 +50,28 @@ def getForm(edge_values_x, edge_values_y):
 	step          = min(vals_x_gaps)+1
 	
 	mask = {(y//step,x//step):(x>=edge_values_x[y][0]) for y in range(0,len(vals_x_gaps),step) for x in range(0,edge_values_x[y][1],step)}
+
 	for i in range(0,len(vals_x_gaps),step):
 		fro,to = edge_values_x[i]
 		print(f"{' '*((fro)//step)}{((to-fro+1)//step)*'#'}")
-	return mask
+	
+	result = dict()
+		
+	for item in mask:
+		
+		if not mask[item]:
+			continue
+		
+		y,x = item
+		f = {'up':(y-1,x),'right':(y,x+1),'down':(y+1,x),'left':(y,x-1)}
+		
+		result[item] = dict()
+
+		for k in f:
+			if (mask.get(f[k])):
+				result[item][k] = f[k]
+
+	return result
 
 def changeDirection(LR:str, base_direction:str):
 	base_direction = clockwise[base_direction]
