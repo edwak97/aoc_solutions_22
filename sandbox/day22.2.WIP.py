@@ -3,7 +3,7 @@ import re
 import copy
 
 lines = []
-with open('input.txt', 'r') as file_origin: 
+with open('test_input.txt', 'r') as file_origin: 
 		lines = file_origin.readlines()
 
 lines = [line.strip('\n') for line in lines]
@@ -98,7 +98,6 @@ def getForm(edge_values_x, edge_values_y):
 		
 		result[item] = set()
 		
-		#obtaining open borders
 		for k in f:
 			if mask.get(f[k]):
 				result[item].add(k)
@@ -113,17 +112,14 @@ def fold(map_to_fold, base=None, was_fold = None, center = None):
 	if not base:
 		base = list(map_to_fold.keys())[0] #base = (0,1)	
 	
+	y,x = base
+
 	if not center:
-		base_coords = list(base.values())
-		z_c = 0.5
-		y_c = sum([y for (_,y,_) in base_coords])/4
-		x_c = sum([x for (_,_,x) in base_coords])/4
-		center = (z_c,y_c,x_c)
+		center = (0.5, y+0.5, x+0.5)
 	
 	if not was_fold:
 		was_fold = set(base)
 	
-	y,x = base
 	f = {'up':(y-1,x),'right':(y,x+1),'down':(y+1,x),'left':(y,x-1)}
 	sides_to_check = {key:f[key] for key in f if map_to_fold.get(key) and (f[key] not in was_fold)}
 	
@@ -132,17 +128,23 @@ def fold(map_to_fold, base=None, was_fold = None, center = None):
 		rotateSides(sides_to_rotate, map_to_fold[side], map_to_fold, center)
 		
 		was_fold.add(sides_to_check[side])
+
 		fold(map_to_fold, base, was_fold, center)
 
 def buildForm(form):
+	
 	step = form['step']
 	to_fold = dict()
 
 	for yx in form['form']:		
 		y,x = yx
+
+		#boundaries coordinates
 		to_fold[yx] = {'up':((0,y,x),(0,y,x+1)),'right':((0,y,x+1),(0,y+1,x+1)),'down':((0,y+1,x),(0,y+1,x+1)),'left':((0,y,x),(0,y+1,x))}
 	
 	fold(to_fold)
+	
+	return {'step': form['step'], 'form':to_fold}
 
 	'''
 	return {
@@ -219,8 +221,7 @@ def tryMove(direction, pos, step, positions, final_form):
 		opposed = {'up':'down','down':'up','left':'right','right':'left'}
 		
 		new_direction = opposed[last_direction]
-	
-	#print(next_pos)
+
 	return tryMove(new_direction, next_pos, step-1, positions, final_form)
 
 positions = {(line_number,char_position):char!='#' for line_number,line in enumerate(lines) for char_position,char in enumerate(line) if char != ' '}
