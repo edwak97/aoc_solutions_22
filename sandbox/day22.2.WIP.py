@@ -22,7 +22,7 @@ def getXY(y_val, x_val, positions, final_form, side_name):
 
 	_y,_x = y_val//step,x_val//step
 
-	side_description = final_form['form'][(_y,_x)][side_name]
+	side_description = final_form['body'][(_y,_x)][side_name]
 
 	new_y,new_x = side_description['yx']
 	side = side_description['side']
@@ -94,62 +94,73 @@ def getForm(edge_values_x, edge_values_y):
 			continue
 		
 		y,x = item
-		f = {'up':(y-1,x),'right':(y,x+1),'down':(y+1,x),'left':(y,x-1)}
+		f = {(y-1,x):'up', (y,x+1):'right', (y+1,x):'down', (y,x-1):'left'}
 		
-		result[item] = set()
-		
-		for k in f:
-			if mask.get(f[k]):
-				result[item].add(k)
+		result[item] = {
+			'directions': {yx:f[yx] for yx in f if mask.get(yx)}
+			,'sides_coordinates':{'up':((0,y,x),(0,y,x+1)),'right':((0,y,x+1),(0,y+1,x+1)),'down':((0,y+1,x),(0,y+1,x+1)),'left':((0,y,x),(0,y+1,x))}
+		}
 	
-	return {'step':step,'form':result}
+	return {'step':step,'body':result}
 
-def rotateSides(sides_to_rotate, axis, map_to_fold, center):
-	return
 
-def fold(map_to_fold, base=None, was_fold = None, center = None):
-	# was_fold is the set of previously fold of previous fold sides
+def rotateSides(map_to_fold, side_to_rotate, axis_coords, center, were_rotated):
+	
+	((rz0, ry0, rx0),(rz1,ry1,rx1)) = axis_coords
+	
+	for direction in map_to_fold[side_to_rotate]['sides_coordinates']:
+		
+		((z0,y0,x0),(z1,y1,x1)) = map_to_fold[side_to_rotate]['sides_coordinates'][direction]
+		
+		if rz0 != rz1:
+			_z0,_z1 = z0,z1
+			pass
+		elif ry0 != ry1:
+			_y0,_y1 = y0,y1
+			pass
+		elif rx0 != rx1:
+			_x0,_x1 = x0,x1
+			pass
+
+		map_to_fold[side_to_rotate['side_coordinates'][direction] = ((_z0,_y0,_x0),(_z1,_y1,_x1))
+	were_rotated.add(side_to_rotate)
+
+	for _side in map_to_fold[side]['directions']
+		
+		if _side in rotated:
+			continue
+		rotateSides(map_to_fold, _side, around_side, boundary_name, center, were_rotated)
+
+
+def fold(map_to_fold, base=None, were_passed = set(), center = None):
+
 	if not base:
 		base = list(map_to_fold.keys())[0] #base = (0,1)	
-	
-	y,x = base
 
-	if not center:
+	 if not center:
+		y,x = base
 		center = (0.5, y+0.5, x+0.5)
 	
-	if not was_fold:
-		was_fold = set(base)
+	were_passed.add(base)
 	
-	f = {'up':(y-1,x),'right':(y,x+1),'down':(y+1,x),'left':(y,x-1)}
-	sides_to_check = {key:f[key] for key in f if map_to_fold.get(key) and (f[key] not in was_fold)}
-	
-	for side in sides_to_check:
-		sides_to_rotate = obtainSidesToRotate(map_to_fold, was_fold)
-		rotateSides(sides_to_rotate, map_to_fold[side], map_to_fold, center)
+	for side in map_to_fold[base]['directions']:
+		if side in were_passed:
+			continue
+
+		boundary_name = map_to_fold[base]['directions'][side]
 		
-		was_fold.add(sides_to_check[side])
+		axis_coords = map_to_fold[base]['sides_coordinates'][boundary_name]
 
-		fold(map_to_fold, base, was_fold, center)
+		rotateSides(map_to_fold, side, axis_coords, center, copy.copy(were_passed))
 
-def buildForm(form):
-	
-	step = form['step']
-	to_fold = dict()
+		fold(map_to_fold, side, were_passed, center)
 
-	for yx in form['form']:		
-		y,x = yx
+#this is what obtainDescription needs to build the final map properly:
 
-		#boundaries coordinates
-		to_fold[yx] = {'up':((0,y,x),(0,y,x+1)),'right':((0,y,x+1),(0,y+1,x+1)),'down':((0,y+1,x),(0,y+1,x+1)),'left':((0,y,x),(0,y+1,x))}
-	
-	fold(to_fold)
-	
-	return {'step': form['step'], 'form':to_fold}
-
-	'''
+'''
 	return {
 		'step':50,
-		'form':{
+		'body':{
 			(0,1):{
 				'left':   {'yx':(2,0),'side':'left','reverse':True}
 				,'up': {'yx':(3,0),'side':'left','reverse':False}
@@ -164,8 +175,7 @@ def buildForm(form):
 				'right':    {'yx':(0,2),'side':'down', 'reverse':False}
 				,'left': {'yx':(2,0),'side':'up', 'reverse':False}
 			},
-			(2,0):{
-				'up': {'yx':(1,1),'side':'left',   'reverse':False}
+			(2,0):{				'up': {'yx':(1,1),'side':'left',   'reverse':False}
 				,'left':{'yx':(0,1),'side':'left', 'reverse':True}
 			},
 			(2,1):{
@@ -179,7 +189,7 @@ def buildForm(form):
 			}
 		}
 	}
-	'''
+'''
 
 def changeDirection(LR:str, base_direction:str):
 	
@@ -217,7 +227,7 @@ def tryMove(direction, pos, step, positions, final_form):
 		y_f, x_f = y//final_form['step'], x//final_form['step']
 		
 		#where new side is:
-		last_direction = final_form['form'][(y_f,x_f)][direction]['side']
+		last_direction = final_form['body'][(y_f,x_f)][direction]['side']
 		opposed = {'up':'down','down':'up','left':'right','right':'left'}
 		
 		new_direction = opposed[last_direction]
@@ -231,18 +241,23 @@ edge_values_y = {x_val:(lambda lst: (min(lst),max(lst)))({y for (y,x) in positio
 
 form = getForm(edge_values_x, edge_values_y)
 
-final_form = buildForm(form)
-print(final_form)
+print(form)
+
 sys.exit()
 
-positions = {(y,x):obtainDescription(y,x,positions,edge_values_y,edge_values_x,final_form) for (y,x) in positions if positions[(y,x)]}
+fold(form['body'])
+
+print(form)
+sys.exit()
+
+positions = {(y,x):obtainDescription(y,x,positions,edge_values_y,edge_values_x, form) for (y,x) in positions if positions[(y,x)]}
 
 init_direction = 'right'
 init_position = (0,min([x for (y,x) in positions if y==0]))
 
 for i,step in enumerate(steps):
 	if i%2==0:
-		init_direction,init_position = tryMove(init_direction, init_position, int(step), positions, final_form)
+		init_direction,init_position = tryMove(init_direction, init_position, int(step), positions, form)
 		continue
 	init_direction = changeDirection(step,init_direction)
 
