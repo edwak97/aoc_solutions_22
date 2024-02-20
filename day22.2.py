@@ -1,8 +1,9 @@
 import sys
 import re
+import copy
+import math
 
 lines = []
-flnm = 'test_input'
 with open('input.txt', 'r') as file_origin: 
 		lines = file_origin.readlines()
 
@@ -12,13 +13,17 @@ steps = lines.pop()
 
 steps = re.findall(r'L|R|\d+', steps)
 
+clockwise =  {'right':0,'down':1,'left':2,'up':3}
+_clockwise = {0:'right',1:'down',2:'left',3:'up'}
+
+
 def getXY(y_val, x_val, positions, final_form, side_name):
 	
 	step = final_form['step']
 
 	_y,_x = y_val//step,x_val//step
 
-	side_description = final_form['form'][(_y,_x)][side_name]
+	side_description = final_form['body'][(_y,_x)][side_name]
 
 	new_y,new_x = side_description['yx']
 	side = side_description['side']
@@ -36,6 +41,7 @@ def getXY(y_val, x_val, positions, final_form, side_name):
 		x = x if side == 'left' else (x+step-1)
 	
 	return (y,x) if positions[(y,x)] else None
+
 
 def obtainDescription(y_val:int, x_val:int, positions, max_val_y, max_val_x, final_form):
 	
@@ -68,8 +74,6 @@ def obtainDescription(y_val:int, x_val:int, positions, max_val_y, max_val_x, fin
 	
 	return result
 
-clockwise =  {'right':0,'down':1,'left':2,'up':3}
-_clockwise = {0:'right',1:'down',2:'left',3:'up'}
 
 def getForm(edge_values_x, edge_values_y):
 	
@@ -91,49 +95,134 @@ def getForm(edge_values_x, edge_values_y):
 			continue
 		
 		y,x = item
-		f = {'up':(y-1,x),'right':(y,x+1),'down':(y+1,x),'left':(y,x-1)}
+		f = {(y-1,x):'up', (y,x+1):'right', (y+1,x):'down', (y,x-1):'left'}
 		
-		result[item] = dict()
-
-		for k in f:
-			if (mask.get(f[k])):
-				result[item][k] = f[k]
-	
-	return {'step':step,'form':result}
-
-def buildForm(form):
-	return {
-		'step':50,
-		'form':{
-			(0,1):{
-				'left':   {'yx':(2,0),'side':'left','reverse':True}
-				,'up': {'yx':(3,0),'side':'left','reverse':False}
-		#no key 'down' because the movement is supposed to happen in the "natural" direction
-			},
-			(0,2):{
-				'up':    {'yx':(3,0),'side':'down',   'reverse':False}
-				,'down': {'yx':(1,1),'side':'right', 'reverse':False}
-				,'right': {'yx':(2,1),'side':'right', 'reverse':True}
-			},
-			(1,1):{
-				'right':    {'yx':(0,2),'side':'down', 'reverse':False}
-				,'left': {'yx':(2,0),'side':'up', 'reverse':False}
-			},
-			(2,0):{
-				'up': {'yx':(1,1),'side':'left',   'reverse':False}
-				,'left':{'yx':(0,1),'side':'left', 'reverse':True}
-			},
-			(2,1):{
-				'right':  {'yx':(0,2),'side':'right','reverse':True}
-				,'down': {'yx':(3,0),'side':'right','reverse':False}
-			},
-			(3,0):{
-				'left':     {'yx':(0,1),'side':'up','reverse':False}
-				,'right': {'yx':(2,1),'side':'down','reverse':False}
-				,'down':  {'yx':(0,2),'side':'up','reverse':False}
-			}
+		result[item] = {
+			'directions': {yx:f[yx] for yx in f if mask.get(yx)}
+			,'sides_coordinates':{'up':((0,y,x),(0,y,x+1)),'right':((0,y,x+1),(0,y+1,x+1)),'down':((0,y+1,x),(0,y+1,x+1)),'left':((0,y,x),(0,y+1,x))}
 		}
-	}
+	
+	return {'step':step,'body':result}
+
+
+def dist(z,y,x,center):
+	z_c,y_c,x_c = center
+	return math.sqrt((z_c-z)**2 + (y_c-y)**2 + (x_c-x)**2)
+
+
+def rotateSides(map_to_fold, side_to_rotate, axis_coords, center, were_rotated):
+	
+	((rz0, ry0, rx0),(rz1,ry1,rx1)) = axis_coords
+	
+	for direction in map_to_fold[side_to_rotate]['sides_coordinates']:
+		
+		((z0,y0,x0),(z1,y1,x1)) = map_to_fold[side_to_rotate]['sides_coordinates'][direction]
+		
+		if rz0 != rz1:
+			z0_0,z0_1, z1_0,z1_1 = z0,z0, z1,z1
+			
+			x0_0 = -(y0-ry0)*1 + rx0
+			x1_0 = -(y1-ry1)*1 + rx1
+			
+			y0_0 =  (x0-rx0)*1 + ry0
+			y1_0 =  (x1-rx1)*1 + ry1
+
+
+
+			x0_1 =  (y0-ry0)*1 + rx0
+			x1_1 =  (y1-ry1)*1 + rx1
+
+			y0_1 = -(x0-rx0)*1 + ry0
+			y1_1 = -(x1-rx1)*1 + ry1
+
+		elif ry0 != ry1:	
+			y0_0,y0_1, y1_0,y1_1 = y0,y0, y1,y1
+
+			x0_0 = -(z0-rz0)*1 + rx0
+			x1_0 = -(z1-rz1)*1 + rx1
+
+			z0_0 =  (x0-rx0)*1 + rz0
+			z1_0 =  (x1-rx1)*1 + rz1
+			
+
+
+			x0_1 =  (z0-rz0)*1 + rx0
+			x1_1 =  (z1-rz1)*1 + rx1
+
+			z0_1 = -(x0-rx0)*1 + rz0
+			z1_1 = -(x1-rx1)*1 + rz1
+		
+		elif rx0 != rx1:
+			x0_0,x0_1, x1_0,x1_1 = x0,x0, x1,x1
+			
+			y0_0 = -(z0-rz0)*1 + ry0
+			y1_0 = -(z1-rz1)*1 + ry1
+
+			z0_0 =  (y0-ry0)*1 + rz0
+			z1_0 =  (y1-ry1)*1 + rz1
+			
+
+
+			y0_1 =  (z0-rz0)*1 + ry0
+			y1_1 =  (z1-rz1)*1 + ry1
+
+			z0_1 = -(y0-ry0)*1 + rz0
+			z1_1 = -(y1-ry1)*1 + rz1
+		
+		begin = (z0_0,y0_0,x0_0) if dist(z0_0,y0_0,x0_0,center) < dist(z0_1,y0_1,x0_1,center) else (z0_1,y0_1,x0_1)
+		end   = (z1_0,y1_0,x1_0) if dist(z1_0,y1_0,x1_0,center) < dist(z1_1,y1_1,x1_1,center) else (z1_1,y1_1,x1_1)
+
+		map_to_fold[side_to_rotate]['sides_coordinates'][direction] = (begin, end)
+	were_rotated.add(side_to_rotate)
+
+	for _side in map_to_fold[side_to_rotate]['directions']:
+		
+		if _side in were_rotated:
+			continue
+		rotateSides(map_to_fold, _side, axis_coords, center, were_rotated)
+
+
+def fold(map_to_fold, base=None, were_passed = set(), center = None):
+
+	if not base:
+		base = list(map_to_fold.keys())[0] #base = (0,1)	
+
+	if not center:
+		y,x = base
+		center = (0.5, y+0.5, x+0.5)
+	
+	were_passed.add(base)
+	
+	for side in map_to_fold[base]['directions']:
+		if side in were_passed:
+			continue
+
+		boundary_name = map_to_fold[base]['directions'][side]
+		
+		axis_coords = map_to_fold[base]['sides_coordinates'][boundary_name]
+
+		rotateSides(map_to_fold, side, axis_coords, center, copy.copy(were_passed))
+
+		fold(map_to_fold, side, were_passed, center)
+
+def refine(formbody):
+	
+	for item in formbody:
+		del(formbody[item]['directions'])
+		for _dir in clockwise:
+			formbody[item][_dir] = dict()
+			_begin, _end = formbody[item]['sides_coordinates'][_dir]
+			for side in formbody:
+				if side == item:
+					continue
+				for direction,(begin,end) in formbody[side]['sides_coordinates'].items():
+					if ((begin == _begin) and (end == _end)) or ((begin == _end) and (end == _begin)):
+							formbody[item][_dir]['yx'] =      side
+							formbody[item][_dir]['side'] =    direction
+							formbody[item][_dir]['reverse'] = begin == _end
+							break
+	for item in formbody:
+		del(formbody[item]['sides_coordinates'])
 
 def changeDirection(LR:str, base_direction:str):
 	
@@ -171,12 +260,11 @@ def tryMove(direction, pos, step, positions, final_form):
 		y_f, x_f = y//final_form['step'], x//final_form['step']
 		
 		#where new side is:
-		last_direction = final_form['form'][(y_f,x_f)][direction]['side']
+		last_direction = final_form['body'][(y_f,x_f)][direction]['side']
 		opposed = {'up':'down','down':'up','left':'right','right':'left'}
 		
 		new_direction = opposed[last_direction]
-	
-	#print(next_pos)
+
 	return tryMove(new_direction, next_pos, step-1, positions, final_form)
 
 positions = {(line_number,char_position):char!='#' for line_number,line in enumerate(lines) for char_position,char in enumerate(line) if char != ' '}
@@ -186,16 +274,20 @@ edge_values_y = {x_val:(lambda lst: (min(lst),max(lst)))({y for (y,x) in positio
 
 form = getForm(edge_values_x, edge_values_y)
 
-final_form = buildForm(form)
+fold(form['body'])
 
-positions = {(y,x):obtainDescription(y,x,positions,edge_values_y,edge_values_x,final_form) for (y,x) in positions if positions[(y,x)]}
+refine(form['body'])
+
+print(form)
+
+positions = {(y,x):obtainDescription(y,x,positions,edge_values_y,edge_values_x, form) for (y,x) in positions if positions[(y,x)]}
 
 init_direction = 'right'
 init_position = (0,min([x for (y,x) in positions if y==0]))
 
 for i,step in enumerate(steps):
 	if i%2==0:
-		init_direction,init_position = tryMove(init_direction, init_position, int(step), positions, final_form)
+		init_direction,init_position = tryMove(init_direction, init_position, int(step), positions, form)
 		continue
 	init_direction = changeDirection(step,init_direction)
 
